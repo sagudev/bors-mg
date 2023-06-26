@@ -81,15 +81,12 @@ impl RepositoryClient for GithubRepositoryClient {
     ) -> anyhow::Result<Vec<CheckSuite>> {
         let response = self
             .client
-            ._get(
-                self.client.base_url.join(&format!(
-                    "/repos/{}/{}/commits/{}/check-suites",
-                    self.repo_name.owner(),
-                    self.repo_name.name(),
-                    sha.0
-                ))?,
-                None::<&()>,
-            )
+            ._get(format!(
+                "/repos/{}/{}/commits/{}/check-suites",
+                self.repo_name.owner(),
+                self.repo_name.name(),
+                sha.0
+            ))
             .await?;
 
         #[derive(serde::Deserialize, Debug)]
@@ -105,7 +102,7 @@ impl RepositoryClient for GithubRepositoryClient {
         }
 
         // `response.json()` is not used because of the 'a lifetime
-        let text = response.text().await?;
+        let text = Into::<reqwest::Response>::into(response).text().await?;
         let response: CheckSuiteResponse = serde_json::from_str(&text)?;
         let suites = response
             .check_suites

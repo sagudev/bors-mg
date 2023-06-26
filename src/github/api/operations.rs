@@ -46,14 +46,7 @@ pub async fn merge_branches(
         .merges_url
         .as_ref()
         .map(|url| url.to_string())
-        .unwrap_or_else(|| {
-            format!(
-                "{}/repos/{}/{}/merges",
-                client.base_url,
-                repo.name().owner,
-                repo.name().name
-            )
-        });
+        .unwrap_or_else(|| format!("/repos/{}/{}/merges", repo.name().owner, repo.name().name));
 
     let request = MergeRequest {
         base: base_ref,
@@ -65,7 +58,10 @@ pub async fn merge_branches(
     match response {
         Ok(response) => {
             let status = response.status();
-            let text = response.text().await.unwrap_or_default();
+            let text = Into::<reqwest::Response>::into(response)
+                .text()
+                .await
+                .unwrap_or_default();
 
             tracing::trace!(
                 "Response from merging `{head_sha}` into `{base_ref}` in `{}`: {status} ({text})",
@@ -148,26 +144,22 @@ async fn update_branch(
     branch_name: String,
     sha: &CommitSha,
 ) -> Result<(), BranchUpdateError> {
-    let url = repo
-        .client()
-        .base_url
-        .join(&format!(
-            "repos/{}/{}/git/refs/{}",
-            repo.name().owner(),
-            repo.name().name(),
-            Reference::Branch(branch_name.clone()).ref_url()
-        ))
-        .unwrap();
     let res: reqwest::Response = repo
         .client
         ._patch(
-            url,
+            format!(
+                "/repos/{}/{}/git/refs/{}",
+                repo.name().owner(),
+                repo.name().name(),
+                Reference::Branch(branch_name.clone()).ref_url()
+            ),
             Some(&serde_json::json!({
                 "sha": sha.as_ref(),
                 "force": true
             })),
         )
-        .await?;
+        .await?
+        .into();
 
     let status = res.status();
     tracing::trace!(
