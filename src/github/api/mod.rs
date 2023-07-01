@@ -1,68 +1,57 @@
-use std::collections::HashMap;
+/*use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 
+use crate::models::{apps::App, AppId, InstallationRepositories, Repository};
 use anyhow::Context;
 use base64::Engine;
-use octocrab::models::{App, AppId, InstallationRepositories, Repository};
-use octocrab::Octocrab;
-use secrecy::{ExposeSecret, SecretVec};
-
-use client::GithubRepositoryClient;
 
 use crate::bors::event::PullRequestComment;
-use crate::bors::{BorsState, RepositoryState};
-use crate::config::{RepositoryConfig, CONFIG_FILE_PATH};
-use crate::database::{DbClient, SeaORMClient};
-use crate::github::GithubRepoName;
-use crate::permissions::TeamApiPermissionResolver;
+use crate::config::Config;
+use crate::github::GithubRepo;*/
 
 pub mod client;
+pub mod misc;
 pub(crate) mod operations;
 
-type GHRepositoryState = RepositoryState<GithubRepositoryClient>;
+const API_ENDPOINT: &str = "https://api.github.com";
 
-type RepositoryMap = HashMap<GithubRepoName, GHRepositoryState>;
-
-/// Provides access to managed GitHub repositories.
-pub struct GithubAppState {
+// / Provides access to managed GitHub repositories.
+/*pub struct GithubAppState {
     app: App,
-    client: Octocrab,
-    repositories: RepositoryMap,
+}*/
+
+//impl GithubAppState {
+// Loads repositories managed by the Bors GitHub app with the given ID.
+/*pub async fn load(
+    app_id: AppId,
+    private_key: SecretVec<u8>,
     db: SeaORMClient,
-}
+) -> anyhow::Result<GithubAppState> {
+    let key = jsonwebtoken::EncodingKey::from_rsa_pem(private_key.expose_secret().as_ref())
+        .context("Could not encode private key")?;
 
-impl GithubAppState {
-    /// Loads repositories managed by the Bors GitHub app with the given ID.
-    pub async fn load(
-        app_id: AppId,
-        private_key: SecretVec<u8>,
-        db: SeaORMClient,
-    ) -> anyhow::Result<GithubAppState> {
-        let key = jsonwebtoken::EncodingKey::from_rsa_pem(private_key.expose_secret().as_ref())
-            .context("Could not encode private key")?;
+    let client = Octocrab::builder()
+        .app(app_id, key)
+        .build()
+        .context("Could not create octocrab builder")?;
 
-        let client = Octocrab::builder()
-            .app(app_id, key)
-            .build()
-            .context("Could not create octocrab builder")?;
+    let app = client
+        .current()
+        .app()
+        .await
+        .context("Could not load Github App")?;
 
-        let app = client
-            .current()
-            .app()
-            .await
-            .context("Could not load Github App")?;
-
-        let repositories = load_repositories(&client).await?;
-        Ok(GithubAppState {
-            app,
-            client,
-            repositories,
-            db,
-        })
-    }
-}
-
+    let repositories = load_repositories(&client).await?;
+    Ok(GithubAppState {
+        app,
+        client,
+        repositories,
+        db,
+    })
+}*/
+//}
+/*
 /// Loads repositories that are connected to the given GitHub App client.
 pub async fn load_repositories(client: &Octocrab) -> anyhow::Result<RepositoryMap> {
     let installations = client
@@ -124,7 +113,7 @@ async fn create_repo_state(
         return Err(anyhow::anyhow!("Repository {} has no owner", repo.name));
     };
 
-    let name = GithubRepoName::new(&owner.login, &repo.name);
+    let name = GithubRepo::new(&owner.login, &repo.name);
     tracing::info!("Found repository {name}");
 
     let config = match load_repository_config(&repo_client, &name).await {
@@ -161,7 +150,7 @@ async fn create_repo_state(
 /// branch.
 async fn load_repository_config(
     gh_client: &Octocrab,
-    repo: &GithubRepoName,
+    repo: &GithubRepo,
 ) -> anyhow::Result<RepositoryConfig> {
     let mut response = gh_client
         .repos(&repo.owner, &repo.name)
@@ -197,7 +186,7 @@ impl BorsState<GithubRepositoryClient> for GithubAppState {
 
     fn get_repo_state_mut(
         &mut self,
-        repo: &GithubRepoName,
+        repo: &GithubRepo,
     ) -> Option<(
         &mut RepositoryState<GithubRepositoryClient>,
         &mut dyn DbClient,
@@ -227,3 +216,4 @@ impl BorsState<GithubRepositoryClient> for GithubAppState {
         })
     }
 }
+*/

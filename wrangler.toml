@@ -1,0 +1,11 @@
+name = "bors"
+workers_dev = true
+main = "build/worker/shim.mjs"
+compatibility_date = "2023-07-20"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+[[rules]]
+globs = ["**/*.wasm"]
+type = "CompiledWasm"

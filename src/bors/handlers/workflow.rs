@@ -2,7 +2,7 @@ use crate::bors::event::{CheckSuiteCompleted, WorkflowCompleted, WorkflowStarted
 use crate::bors::handlers::is_bors_observed_branch;
 use crate::bors::handlers::labels::handle_label_trigger;
 use crate::bors::{self, RepositoryClient, RepositoryState};
-use crate::database::{BuildStatus, DbClient, WorkflowStatus};
+use crate::github::api::misc::{BuildStatus, DbClient, WorkflowStatus};
 use crate::github::LabelTrigger;
 
 pub(super) async fn handle_workflow_started(
@@ -193,7 +193,7 @@ mod tests {
     use entity::workflow;
 
     use crate::bors::handlers::trybuild::TRY_BRANCH_NAME;
-    use crate::database::WorkflowStatus;
+    use crate::github::api::misc::WorkflowStatus;
     use crate::tests::event::{
         default_pr_number, suite_failure, suite_pending, suite_success, CheckSuiteCompletedBuilder,
         WorkflowCompletedBuilder, WorkflowStartedBuilder,

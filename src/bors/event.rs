@@ -1,6 +1,10 @@
-use crate::database::{WorkflowStatus, WorkflowType};
-use crate::github::{CommitSha, GithubRepoName, GithubUser, PullRequestNumber};
-use octocrab::models::RunId;
+use url::Url;
+
+use crate::github::api::misc::{WorkflowStatus, WorkflowType};
+use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequest, PullRequestNumber};
+use crate::models::RunId;
+
+use super::RepositoryClient;
 
 #[derive(Debug)]
 pub enum BorsEvent {
@@ -19,17 +23,43 @@ pub enum BorsEvent {
     Refresh,
 }
 
+#[derive(Clone, Debug)]
+pub enum PR {
+    PRUrl(Url),
+    PR(PullRequest),
+}
+
+impl PR {
+    pub async fn get_pull<R: RepositoryClient>(&mut self, repo: &R) -> &PullRequest {
+        match self {
+            PR::PRUrl(url) => {
+                let pr = crate::github::api::client::github_pr_to_pr(
+                    repo.get(url.as_str()).await.unwrap().json().await.unwrap(),
+                );
+                *self = PR::PR(pr);
+                if let PR::PR(pr) = self {
+                    pr
+                } else {
+                    unreachable!()
+                }
+            }
+            PR::PR(pr) => pr,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct PullRequestComment {
-    pub repository: GithubRepoName,
+    pub repository: GithubRepo,
     pub author: GithubUser,
     pub pr_number: PullRequestNumber,
+    pub pr: PR,
     pub text: String,
 }
 
 #[derive(Debug)]
 pub struct WorkflowStarted {
-    pub repository: GithubRepoName,
+    pub repository: GithubRepo,
     pub name: String,
     pub branch: String,
     pub commit_sha: CommitSha,
@@ -40,7 +70,7 @@ pub struct WorkflowStarted {
 
 #[derive(Debug)]
 pub struct WorkflowCompleted {
-    pub repository: GithubRepoName,
+    pub repository: GithubRepo,
     pub branch: String,
     pub commit_sha: CommitSha,
     pub run_id: RunId,
@@ -49,7 +79,7 @@ pub struct WorkflowCompleted {
 
 #[derive(Debug)]
 pub struct CheckSuiteCompleted {
-    pub repository: GithubRepoName,
+    pub repository: GithubRepo,
     pub branch: String,
     pub commit_sha: CommitSha,
 }

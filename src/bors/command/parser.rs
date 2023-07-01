@@ -12,11 +12,11 @@ pub enum CommandParseError<'a> {
 }
 
 pub struct CommandParser {
-    prefix: String,
+    prefix: &'static str,
 }
 
 impl CommandParser {
-    pub fn new(prefix: String) -> Self {
+    pub fn new(prefix: &'static str) -> Self {
         Self { prefix }
     }
 
@@ -238,6 +238,17 @@ line two
     }
 
     #[test]
+    fn test_parse_try_with_runner() {
+        let cmds = parse_commands(
+            r#"
+@bors try=wpt
+"#,
+        );
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0], Ok(BorsCommand::Try)));
+    }
+
+    #[test]
     fn test_parse_try_cancel() {
         let cmds = parse_commands("@bors try cancel");
         assert_eq!(cmds.len(), 1);
@@ -245,6 +256,6 @@ line two
     }
 
     fn parse_commands(text: &str) -> Vec<Result<BorsCommand, CommandParseError>> {
-        CommandParser::new("@bors".to_string()).parse_commands(text)
+        CommandParser::new("@bors").parse_commands(text)
     }
 }

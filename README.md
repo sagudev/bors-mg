@@ -1,44 +1,38 @@
-# Bors
-Home of a (WIP) rewrite of the [`homu`](https://github.com/rust-lang/homu) bors implemntation in Rust.
+# Bo
 
-## Architecture
-- An `axum` web server listens on a `/github` endpoint for webhooks related to a GitHub app of the bot.
-- The webhooks are converted to `BorsEvent`s and executed.
-- The bot stores data in a database and performs queries and commands on attached GitHub repositories
-using the GitHub REST API.
+Bors bot without real work. It handles webhooks (commands) and dispatches GH actions to Merge Queueu
 
-## Development
-Directory structure:
-- `database/migration`
-  - `SeaORM` migrations that are the source of truth for database schema
-- `database/entity`
-  - Automatically generated `SeaORM` DB entities, which are generated from a (Postgre) database.
-- `src`
-  - Code of the bot
+## Design priciples
 
-## Database
-You must have `sea-orm-cli` installed for the following commands to work.
-```console
-$ cargo install sea-orm-cli
-```
+- Quasi stateless (to be run in cloudflare workers)
+- Wasm
+- Using Merge Queue
 
-You must also set up a `DATABASE_URL` environment variable. **You can use SQLite for local testing,
-but when entities are regenerated, it should be done against a Postgre database!**
-```console
-$ export DATABASE_URL=sqlite://bors.db?mode=rwc
-```
+## Workflow automata
 
-### Updating the DB schema
-1) Generate a new migration
-    ```console
-    $ sea-orm-cli migrate -d database/migration/ generate <name>
-    ```
-2) Change the migration manually in `database/migration/src/<new-migration>.rs`.
-3) Apply migrations to a **Postgre** DB. (You can use Docker for that).
-    ```console
-    $ sea-orm-cli migrate -d database/migration/ up
-    ```
-4) Re-generate entities, again against a **Postgre** DB.
-    ```console
-    $ sea-orm-cli generate entity -o database/entity/src --lib
-    ```
+When we recive webhook it can be one off three types:
+
+1. Command (classic bors command)
+2. GH command (egg. reviews in GH ui) curenttly unhandled
+3. Workflow status (comeback?? or should this be dead)
+4. app status (registered, updated, removed) (if applicateable)
+
+## Commands
+
+Before running commands we need to verify premissions (org, repo (cache?)).
+
+- `r+ (SHA)`: Accept a PR. Optionally, the SHA of the last commit in the PR can be provided as a guard against synchronization issues or malicious users. Regardless of the form used, PRs will automatically be unaccepted if the contents are changed.
+- `r=NAME (SHA)`: Accept a PR on the behalf of NAME.
+- `r-`: Unacccept a PR.
+- `p=NUMBER`: Set the priority of the accepted PR (defaults to 0).
+- `rollup`: Mark the PR as likely to merge without issue, implies p=-1.
+- `rollup-`: Unmark the PR as rollup.
+- `retry`: Signal that the PR is not bad, and should be retried by buildbot.
+- `try(=runner)`: Request that the PR be tested by buildbot, without accepting it.
+- `force`: Stop all the builds on the configured builders, and proceed to the next PR.
+- `clean`: Clean up the previous build results.
+- `delegate=NAME`: Allow NAME to issue ALL homu commands for this PR
+- `delegate+`: Delegate to the PR owner
+- `delegate-`: Remove the delegatee
+from rust:
+- `rollup=maybe|always|iffy|never`: Mark the PR as "always", "maybe", "iffy", and "never" rollup-able.

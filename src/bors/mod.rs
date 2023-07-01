@@ -1,40 +1,47 @@
-use crate::config::RepositoryConfig;
-use axum::async_trait;
-use octocrab::models::RunId;
-use std::future::Future;
-use std::pin::Pin;
+use crate::models::RunId;
 
-use crate::github::{CommitSha, GithubRepoName, MergeError, PullRequest, PullRequestNumber};
-use crate::permissions::PermissionResolver;
+use crate::github::{CommitSha, GithubRepo, MergeError, PullRequest, PullRequestNumber};
 
 mod command;
-mod context;
 pub mod event;
-mod handlers;
+pub mod handlers;
 
-use crate::bors::event::PullRequestComment;
-use crate::database::DbClient;
 pub use command::CommandParser;
-pub use context::BorsContext;
 pub use handlers::handle_bors_event;
 
 /// Provides functionality for working with a remote repository.
-#[async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait RepositoryClient {
-    fn repository(&self) -> &GithubRepoName;
+    fn repository(&self) -> &GithubRepo;
+    async fn config(&self) -> crate::config::Config;
 
-    /// Resolve a pull request from this repository by it's number.
-    async fn get_pull_request(&mut self, pr: PullRequestNumber) -> anyhow::Result<PullRequest>;
+    async fn get<U: reqwest::IntoUrl>(&self, url: U) -> anyhow::Result<reqwest::Response>;
+    async fn post<D: serde::Serialize + Sized>(
+        &self,
+        end: &str,
+        data: &D,
+    ) -> anyhow::Result<reqwest::Response>;
+    async fn patch<D: serde::Serialize + Sized>(
+        &self,
+        end: &str,
+        data: &D,
+    ) -> anyhow::Result<reqwest::Response>;
 
     /// Post a comment to the pull request with the given number.
-    async fn post_comment(&mut self, pr: PullRequestNumber, text: &str) -> anyhow::Result<()>;
+    async fn post_comment(&self, pr: PullRequestNumber, text: &str) -> anyhow::Result<()>;
+
+    /*/// Resolve a pull request from this repository by it's number.
+        async fn get_pull_request(&mut self, pr: &PullRequestNumber) -> anyhow::Result<PullRequest>;
+    */
+    /// Cancels Github Actions workflows.
+    async fn cancel_workflows(&self, run_ids: Vec<RunId>) -> anyhow::Result<()>;
 
     /// Set the given branch to a commit with the given `sha`.
-    async fn set_branch_to_sha(&mut self, branch: &str, sha: &CommitSha) -> anyhow::Result<()>;
+    async fn set_branch_to_sha(&self, branch: &str, sha: &CommitSha) -> anyhow::Result<()>;
 
     /// Merge `head` into `base`. Returns the SHA of the merge commit.
     async fn merge_branches(
-        &mut self,
+        &self,
         base: &str,
         head: &CommitSha,
         commit_message: &str,
@@ -42,14 +49,13 @@ pub trait RepositoryClient {
 
     /// Find all check suites attached to the given commit and branch.
     async fn get_check_suites_for_commit(
-        &mut self,
+        &self,
         branch: &str,
         sha: &CommitSha,
     ) -> anyhow::Result<Vec<CheckSuite>>;
 
-    /// Cancels Github Actions workflows.
-    async fn cancel_workflows(&mut self, run_ids: Vec<RunId>) -> anyhow::Result<()>;
-
+    // IDK
+    /*
     /// Add a set of labels to a PR.
     async fn add_labels(&mut self, pr: PullRequestNumber, labels: &[String]) -> anyhow::Result<()>;
 
@@ -59,6 +65,7 @@ pub trait RepositoryClient {
         pr: PullRequestNumber,
         labels: &[String],
     ) -> anyhow::Result<()>;
+    */
 }
 
 #[derive(Clone)]
@@ -73,33 +80,4 @@ pub enum CheckSuiteStatus {
 #[derive(Clone)]
 pub struct CheckSuite {
     pub(crate) status: CheckSuiteStatus,
-}
-
-/// Main state holder for the bot.
-/// It is behind a trait to allow easier mocking in tests.
-pub trait BorsState<Client: RepositoryClient> {
-    /// Was the comment created by the bot?
-    fn is_comment_internal(&self, comment: &PullRequestComment) -> bool;
-
-    /// Get repository and database state for the given repository name.
-    fn get_repo_state_mut(
-        &mut self,
-        repo: &GithubRepoName,
-    ) -> Option<(&mut RepositoryState<Client>, &mut dyn DbClient)>;
-
-    /// Get all repositories.
-    fn get_all_repos_mut(&mut self) -> (Vec<&mut RepositoryState<Client>>, &mut dyn DbClient);
-
-    /// Reload state of repositories due to some external change.
-    fn reload_repositories(&mut self) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + '_>>;
-}
-
-/// An access point to a single repository.
-/// Can be used to query permissions for the repository, and also to perform various
-/// actions using the stored client.
-pub struct RepositoryState<Client: RepositoryClient> {
-    pub repository: GithubRepoName,
-    pub client: Client,
-    pub permissions_resolver: Box<dyn PermissionResolver>,
-    pub config: RepositoryConfig,
 }

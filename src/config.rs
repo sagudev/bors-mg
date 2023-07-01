@@ -1,36 +1,91 @@
-use std::collections::HashMap;
-use std::time::Duration;
+use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
 
+use reqwest::Client;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
-use crate::github::{LabelModification, LabelTrigger};
+use crate::github::{GithubRepo, LabelModification, LabelTrigger};
 
-pub const CONFIG_FILE_PATH: &str = "rust-bors.toml";
+/// Prefix for bot (default `@bors-servo`)
+pub static CMD_PREFIX: OnceLock<String> = OnceLock::new();
+/// GitHub Webhook secret
+pub static WEBHOOK_SECRET: OnceLock<String> = OnceLock::new();
+/// Personal Access Token for BOT.
+pub static PAT: OnceLock<String> = OnceLock::new();
 
-/// Configuration of a repository loaded from a `rust-bors.toml`
+/// Config file to search in repo or org config repo
+const CONFIG_FILE_PATH: &str = "/bors.toml";
+/// Organistaion's config repo
+pub const ORG_CONFIG_REPO: &str = "saltfs";
+
+/// Configuration of a repository loaded from a `bors.toml`
 /// file located in the root of the repository file tree.
 #[derive(serde::Deserialize, Debug)]
-pub struct RepositoryConfig {
-    #[serde(
-        default = "default_timeout",
-        deserialize_with = "deserialize_duration_from_secs"
-    )]
-    pub timeout: Duration,
+pub struct Config {
     #[serde(default, deserialize_with = "deserialize_labels")]
     pub labels: HashMap<LabelTrigger, Vec<LabelModification>>,
+    #[serde(default)]
+    pub reviewers: HashSet<String>,
+    #[serde(default)]
+    pub try_users: HashSet<String>,
+    #[serde(default)]
+    pub try_choosers: HashSet<String>,
 }
 
-fn default_timeout() -> Duration {
-    Duration::from_secs(3600)
-}
+impl Config {
+    /// Merges two config
+    ///
+    /// global is org config, local config is repos config
+    fn merge(mut global: Self, local: Self) -> Self {
+        // this field is partiali merged
+        global.labels.extend(local.labels.into_iter());
+        // this field is merged
+        global.reviewers.extend(local.reviewers.into_iter());
+        // this field is merged
+        global.try_users.extend(local.try_users.into_iter());
+        // this field is overriden
+        if !local.try_choosers.is_empty() {
+            global.try_choosers = local.try_choosers;
+        }
+        global
+    }
 
-fn deserialize_duration_from_secs<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let seconds = u64::deserialize(deserializer)?;
-    Ok(Duration::from_secs(seconds))
+    async fn get(client: &Client, repo: &str, branch: &str) -> Option<Self> {
+        if let Ok(res) = client
+            .get(format!(
+                "https://raw.githubusercontent.com/{repo}/{branch}{CONFIG_FILE_PATH}"
+            ))
+            .send()
+            .await
+        {
+            if let Ok(txt) = res.text().await {
+                return toml::from_str(&txt).ok();
+            }
+        }
+        None
+    }
+
+    pub async fn get_all(client: &Client, repo: &GithubRepo) -> Option<Config> {
+        let local = if let Some(loc) = Config::get(client, &repo.to_string(), "master").await {
+            Some(loc)
+        } else {
+            Config::get(client, &repo.to_string(), "main").await
+        };
+
+        let repo = format!("{ORG_CONFIG_REPO}/{}", repo.name());
+        let global = if let Some(loc) = Config::get(client, &repo, "master").await {
+            Some(loc)
+        } else {
+            Config::get(client, &repo, "main").await
+        };
+        match (local, global) {
+            (Some(loc), Some(glob)) => Some(Config::merge(glob, loc)),
+            (Some(loc), None) => Some(loc),
+            (None, Some(glob)) => Some(glob),
+            _ => None,
+        }
+    }
 }
 
 fn deserialize_labels<'de, D>(
@@ -107,22 +162,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Config;
     use std::collections::BTreeMap;
-
-    use crate::config::{default_timeout, RepositoryConfig};
 
     #[test]
     fn deserialize_empty() {
         let content = "";
         let config = load_config(content);
-        assert_eq!(config.timeout, default_timeout());
-    }
-
-    #[test]
-    fn deserialize_timeout() {
-        let content = "timeout = 3600";
-        let config = load_config(content);
-        assert_eq!(config.timeout.as_secs(), 3600);
+        assert!(config.labels.is_empty());
+        assert!(config.reviewers.is_empty());
+        assert!(config.try_users.is_empty());
+        assert!(config.try_choosers.is_empty());
     }
 
     #[test]
@@ -168,7 +218,7 @@ try = ["foo"]
         load_config(content);
     }
 
-    fn load_config(config: &str) -> RepositoryConfig {
+    fn load_config(config: &str) -> Config {
         toml::from_str(config).unwrap()
     }
 }

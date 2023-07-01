@@ -1,9 +1,11 @@
-use octocrab::params::repos::Reference;
 use reqwest::StatusCode;
 use thiserror::Error;
 
-use crate::github::api::client::GithubRepositoryClient;
+use crate::bors::RepositoryClient;
+use crate::config::PAT;
 use crate::github::CommitSha;
+
+use crate::github::api::API_ENDPOINT;
 
 #[derive(Error, Debug)]
 pub enum MergeError {
@@ -16,7 +18,7 @@ pub enum MergeError {
     #[error("Unknown error ({status}): {text}")]
     Unknown { status: StatusCode, text: String },
     #[error("Network error: {0}")]
-    NetworkError(#[from] octocrab::Error),
+    NetworkError(#[from] reqwest::Error),
 }
 
 #[derive(serde::Serialize)]
@@ -34,26 +36,28 @@ struct MergeResponse {
 /// Creates a merge commit on the given repository.
 ///
 /// Documentation: https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#merge-a-branch
-pub async fn merge_branches(
-    repo: &GithubRepositoryClient,
+pub async fn merge_branches<R: RepositoryClient>(
+    repo: &R,
     base_ref: &str,
     head_sha: &CommitSha,
     commit_message: &str,
 ) -> Result<CommitSha, MergeError> {
-    let client = repo.client();
-    let merge_url = repo
-        .repository
-        .merges_url
-        .as_ref()
-        .map(|url| url.to_string())
-        .unwrap_or_else(|| format!("/repos/{}/{}/merges", repo.name().owner, repo.name().name));
-
+    let client = reqwest::Client::new();
     let request = MergeRequest {
         base: base_ref,
         head: head_sha.as_ref(),
         commit_message,
     };
-    let response = client._post(merge_url, Some(&request)).await;
+    let response = client
+        .post(format!(
+            "{API_ENDPOINT}/repos/{}/{}/merges",
+            repo.repository().owner(),
+            repo.repository().name()
+        ))
+        .bearer_auth(PAT.get().unwrap())
+        .json(&request)
+        .send()
+        .await;
 
     match response {
         Ok(response) => {
@@ -65,7 +69,7 @@ pub async fn merge_branches(
 
             tracing::trace!(
                 "Response from merging `{head_sha}` into `{base_ref}` in `{}`: {status} ({text})",
-                repo.name(),
+                repo.repository().name(),
             );
 
             match status {
@@ -87,7 +91,7 @@ pub async fn merge_branches(
         Err(error) => {
             tracing::debug!(
                 "Merging `{head_sha}` into `{base_ref}` in `{}` failed: {error:?}",
-                repo.name()
+                repo.repository().name()
             );
             Err(MergeError::NetworkError(error))
         }
@@ -96,8 +100,8 @@ pub async fn merge_branches(
 
 /// Forcefully updates the branch to the given commit `sha`.
 /// If the branch does not exist yet, it instead attempts to create it.
-pub async fn set_branch_to_commit(
-    repo: &GithubRepositoryClient,
+pub async fn set_branch_to_commit<R: RepositoryClient>(
+    repo: &R,
     branch_name: String,
     sha: &CommitSha,
 ) -> Result<(), BranchUpdateError> {
@@ -115,16 +119,16 @@ pub async fn set_branch_to_commit(
     }
 }
 
-async fn create_branch(
-    repo: &GithubRepositoryClient,
+async fn create_branch<R: RepositoryClient>(
+    repo: &R,
     name: String,
     sha: &CommitSha,
 ) -> Result<(), String> {
-    repo.client
-        .repos(repo.repo_name.owner(), repo.repo_name.name())
-        .create_ref(&Reference::Branch(name), sha.as_ref())
-        .await
-        .map_err(|error| format!("Cannot create branch: {error}"))?;
+    /*repo.client
+    .repos(repo.repo_name.owner(), repo.repo_name.name())
+    .create_ref(&Reference::Branch(name), sha.as_ref())
+    .await
+    .map_err(|error| format!("Cannot create branch: {error}"))?;*/
     Ok(())
 }
 
@@ -133,18 +137,19 @@ pub enum BranchUpdateError {
     #[error("Branch {0} was not found")]
     BranchNotFound(String),
     #[error("IO error")]
-    IOError(#[from] octocrab::Error),
+    IOError(#[from] reqwest::Error),
     #[error("Unknown error: {0}")]
     Custom(String),
 }
 
 /// Force update the branch with the given `branch_name` to the given `sha`.
-async fn update_branch(
-    repo: &GithubRepositoryClient,
+async fn update_branch<R: RepositoryClient>(
+    repo: &R,
     branch_name: String,
     sha: &CommitSha,
 ) -> Result<(), BranchUpdateError> {
-    let res: reqwest::Response = repo
+    todo!();
+    /*let res: reqwest::Response = repo
         .client
         ._patch(
             format!(
@@ -171,5 +176,5 @@ async fn update_branch(
     match status {
         StatusCode::OK => Ok(()),
         _ => Err(BranchUpdateError::BranchNotFound(branch_name)),
-    }
+    }*/
 }

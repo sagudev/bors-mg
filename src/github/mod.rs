@@ -6,22 +6,19 @@ use url::Url;
 
 pub mod api;
 mod labels;
-pub mod server;
-mod webhook;
+pub mod webhook;
 
 pub use api::operations::MergeError;
-pub use api::GithubAppState;
 pub use labels::{LabelModification, LabelTrigger};
-pub use webhook::WebhookSecret;
 
 /// Unique identifier of a GitHub repository
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct GithubRepoName {
+pub struct GithubRepo {
     owner: String,
     name: String,
 }
 
-impl GithubRepoName {
+impl GithubRepo {
     pub fn new(owner: &str, name: &str) -> Self {
         Self {
             owner: owner.to_lowercase(),
@@ -38,7 +35,7 @@ impl GithubRepoName {
     }
 }
 
-impl Display for GithubRepoName {
+impl Display for GithubRepo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}/{}", self.owner, self.name))
     }
@@ -78,7 +75,7 @@ pub struct Branch {
 #[derive(Clone, Debug)]
 pub struct PullRequest {
     pub number: PullRequestNumber,
-    // <author>:<branch>
+    /// <author>:<branch>
     pub head_label: String,
     pub head: Branch,
     pub base: Branch,
