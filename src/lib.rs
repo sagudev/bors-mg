@@ -77,8 +77,17 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     router
         // listener on app webhooks
-        .post_async("/app", |_req, _ctx| async move {
-            Response::error("Bad Request", 400)
+        .post_async("/app", |mut req, _ctx| async move {
+            match GitHubWebhook::from_request(&mut req).await {
+                Ok(webhook) => {
+                    if let Err(e) = handle_bors_event(webhook.0).await {
+                        Response::error(e.to_string(), 500)
+                    } else {
+                        Response::empty()
+                    }
+                }
+                Err(e) => Response::error("Hooking error", e.as_u16()),
+            }
         })
         // listener on manual webhooks
         /*.post_async("/hook", |mut req, _ctx| async move {

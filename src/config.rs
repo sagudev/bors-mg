@@ -90,6 +90,7 @@ impl Config {
         None
     }
 
+    #[allow(unused_mut)]
     pub async fn get_all(repo: &GithubRepo) -> Option<Config> {
         let client = Client::new();
         let mut local = if let Some(loc) = Config::get(&client, &repo.to_string(), "master").await {
