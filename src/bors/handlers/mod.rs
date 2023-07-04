@@ -9,10 +9,11 @@ use crate::bors::handlers::trybuild::{command_try_build, command_try_cancel, TRY
 /*use crate::bors::handlers::workflow::{
     handle_check_suite_completed, handle_workflow_completed, handle_workflow_started,
 };*/
-use crate::bors::RepositoryClient;
 use crate::config::CMD_PREFIX;
 use crate::config::PAT;
-use crate::github::api::client::PATClient;
+use crate::github::client::AutoGitHubClient;
+use crate::github::client::GitHubClient;
+use crate::github::client::TokenClient;
 use crate::github::GithubRepo;
 use crate::github::GithubUser;
 use crate::github::PullRequestNumber;
@@ -111,7 +112,7 @@ pub async fn handle_bors_event(event: BorsEvent) -> anyhow::Result<()> {
 async fn handle_comment(comment: PullRequestComment) -> anyhow::Result<()> {
     let parser = CommandParser::new(CMD_PREFIX.get().unwrap());
     let commands = parser.parse_commands(&comment.text);
-    let repo = PATClient::new(comment.repository.clone());
+    let mut client = AutoGitHubClient::new();
     let mut pr_data = PullRequestData {
         repository: comment.repository,
         author: comment.author,
@@ -128,17 +129,17 @@ async fn handle_comment(comment: PullRequestComment) -> anyhow::Result<()> {
                 let result = match command {
                     BorsCommand::Ping => {
                         let span = tracing::info_span!("Ping");
-                        command_ping(&repo, &pr_data).instrument(span).await
+                        command_ping(&mut client, &pr_data).instrument(span).await
                     }
                     BorsCommand::Try => {
                         let span = tracing::info_span!("Try");
-                        command_try_build(&repo, &mut pr_data)
+                        command_try_build(&mut client, &mut pr_data)
                             .instrument(span)
                             .await
                     }
                     BorsCommand::TryCancel => {
                         let span = tracing::info_span!("Cancel try");
-                        command_try_cancel(&repo, &mut pr_data)
+                        command_try_cancel(&mut client, &mut pr_data)
                             .instrument(span)
                             .await
                     }
@@ -157,7 +158,8 @@ async fn handle_comment(comment: PullRequestComment) -> anyhow::Result<()> {
 
                 tracing::warn!("{error_msg}");
 
-                repo.post_comment(pr_data.number, &error_msg)
+                client
+                    .post_comment(&pr_data.repository, pr_data.number, &error_msg)
                     .await
                     .context("Could not reply to PR comment")?;
             }

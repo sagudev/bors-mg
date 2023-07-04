@@ -1,15 +1,17 @@
 use super::PullRequestData;
-use crate::bors::RepositoryClient;
+use crate::github::client::GitHubClient;
 
-pub(super) async fn command_ping<R: RepositoryClient>(
-    repo: &R,
+pub(super) async fn command_ping<C: GitHubClient>(
+    client: &mut C,
     pr_data: &PullRequestData,
 ) -> anyhow::Result<()> {
-    let text = if repo.repository().owner() == "servo" {
+    let text = if pr_data.repository.owner() == "servo" {
         ":sleepy: I'm awake I'm awake"
     } else {
         "Pong 🏓!"
     };
-    repo.post_comment(pr_data.number, text).await?;
+    client
+        .post_comment(&pr_data.repository, pr_data.number, text)
+        .await?;
     Ok(())
 }

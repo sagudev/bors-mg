@@ -12,6 +12,11 @@ crate-type = ["cdylib"]
 lto = true
 strip = true
 codegen-units = 1
+#opt-level = "z"  # Optimize for size.
+
+[features]
+default = []
+servo = []
 
 [dependencies]
 async-trait = "0.1"
@@ -29,7 +34,7 @@ toml = "0.7"
 # Web
 url = { version = "2", features = ["serde"] }
 http = "0.2"
-hyper = { version="0.14", default-features = false, features = ['http1', 'client'] }
+#hyper = { version="0.14", default-features = false, features = ['http1', 'client'] }
 tokio = { version = "1", default-features = false, features = ['io-util', 'macros', 'rt']}
 console_error_panic_hook = { version = "0.1" }
 wasm-bindgen-futures = "0.4"
@@ -40,22 +45,22 @@ tracing-subscriber = { version = "0.3", features = ['time', 'json'] }
 time = { version = "0.3", features = ['wasm-bindgen'] }
 reqwest = { version = "0.11", features = ['json'] }
 
+
 # Cryptography
 sha2 = "0.10"
 hmac = "0.12"
 hex = "0.4"
 base64 = "0.21"
+jsonwebtoken = { git="https://github.com/chenzhenjia/jsonwebtoken.git", branch="wasm_support" }
 
 # Time
-chrono = { version = "0.4.19", default-features = false, features = [
+chrono = { version = "0.4", default-features = false, features = [
     "serde",
     "clock",
 ] }
 
-itertools = "0.10"
-
 worker = "0.0.17"
+graphql_client = "0.13"
 
 [dev-dependencies]
 insta = "1.26"
-derive_builder = "0.12"

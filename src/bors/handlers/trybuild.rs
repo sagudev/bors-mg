@@ -2,11 +2,13 @@ use crate::bors::event::{PullRequestComment, PR};
 use crate::config::Config;
 use anyhow::anyhow;
 
-use crate::bors::RepositoryClient;
-use crate::github::api::misc::{
+use crate::github::client::GitHubClient;
+use crate::github::misc::{
     BuildModel, BuildStatus, PullRequestModel, WorkflowStatus, WorkflowType,
 };
-use crate::github::{GithubUser, LabelTrigger, MergeError, PullRequest, PullRequestNumber};
+use crate::github::{
+    GithubRepo, GithubUser, LabelTrigger, MergeError, PullRequest, PullRequestNumber,
+};
 use crate::permissions::{PermissionResolver, PermissionType};
 
 use super::PullRequestData;
@@ -18,19 +20,27 @@ use super::PullRequestData;
 const TRY_MERGE_BRANCH_NAME: &str = "automation/bors/try-merge";
 
 // This branch should run CI checks.
-pub(super) const TRY_BRANCH_NAME: &str = "automation/bors/try";
+pub(super) const TRY_BRANCH_NAME: &str = "try";
 
 /// Performs a so-called try build - merges the PR branch into a special branch designed
 /// for running CI checks.
-pub(super) async fn command_try_build<R: RepositoryClient>(
-    repo: &R,
+pub(super) async fn command_try_build<C: GitHubClient>(
+    client: &mut C,
     pr_data: &mut PullRequestData,
 ) -> anyhow::Result<()> {
-    let config = repo.config().await;
-    if !check_try_permissions(repo, &pr_data.author, &config, pr_data.number).await? {
+    let config = Config::get_all(&pr_data.repository).await.unwrap();
+    if !check_try_permissions(
+        client,
+        &pr_data.repository,
+        &pr_data.author,
+        &config,
+        pr_data.number,
+    )
+    .await?
+    {
         return Ok(());
     }
-    let pr = pr_data.pr.get_pull(repo).await;
+    let pr = pr_data.pr.get_pull(client).await;
 
     /*if let Some(ref build) = pr_model.try_build {
         if build.status == BuildStatus::Pending {
@@ -48,12 +58,14 @@ pub(super) async fn command_try_build<R: RepositoryClient>(
     //let mut pull = comment.pr.clone();
 
     // main branch on try merge branch
-    repo.set_branch_to_sha(TRY_MERGE_BRANCH_NAME, &pr.base.sha)
+    client
+        .set_branch_to_sha(&pr_data.repository, TRY_MERGE_BRANCH_NAME, &pr.base.sha)
         .await
         .map_err(|error| anyhow!("Cannot set try merge branch to main branch: {error:?}"))?;
     // do a merge
-    match repo
+    match client
         .merge_branches(
+            &pr_data.repository,
             TRY_MERGE_BRANCH_NAME,
             &pr.head.sha,
             &auto_merge_commit_message(pr, "<try>"),
@@ -63,7 +75,8 @@ pub(super) async fn command_try_build<R: RepositoryClient>(
         Ok(merge_sha) => {
             tracing::debug!("Merge successful, SHA: {merge_sha}");
             // push to ci
-            repo.set_branch_to_sha(TRY_BRANCH_NAME, &merge_sha)
+            client
+                .set_branch_to_sha(&pr_data.repository, TRY_BRANCH_NAME, &merge_sha)
                 .await
                 .map_err(|error| anyhow!("Cannot set try branch to main branch: {error:?}"))?;
 
@@ -71,37 +84,54 @@ pub(super) async fn command_try_build<R: RepositoryClient>(
 
             //handle_label_trigger(repo, pr.number, LabelTrigger::TryBuildStarted).await?;
 
-            repo.post_comment(
-                pr.number,
-                &format!(
-                    ":hourglass: Trying commit {} with merge {merge_sha}…",
-                    pr.head.sha
-                ),
-            )
-            .await?;
-            Ok(())
-        }
-        Err(MergeError::Conflict) => {
-            tracing::warn!("Merge conflict");
-            repo.post_comment(pr.number, &merge_conflict_message(&pr.head.name))
+            client
+                .post_comment(
+                    &pr_data.repository,
+                    pr.number,
+                    &format!(
+                        ":hourglass: Trying commit {} with merge {merge_sha}…",
+                        pr.head.sha
+                    ),
+                )
                 .await?;
             Ok(())
         }
-        Err(error) => Err(error.into()),
+        Err(error) => match error.downcast_ref() {
+            Some(MergeError::Conflict) => {
+                tracing::warn!("Merge conflict");
+                client
+                    .post_comment(
+                        &pr_data.repository,
+                        pr.number,
+                        &merge_conflict_message(&pr.head.name),
+                    )
+                    .await?;
+                Ok(())
+            }
+            _ => Err(error),
+        },
     }
 }
 
-pub(super) async fn command_try_cancel<R: RepositoryClient>(
-    repo: &R,
+pub(super) async fn command_try_cancel<C: GitHubClient>(
+    client: &mut C,
     comment: &mut PullRequestData,
 ) -> anyhow::Result<()> {
-    let config = repo.config().await;
-    if !check_try_permissions(repo, &comment.author, &config, comment.number).await? {
+    let config = Config::get_all(&comment.repository).await.unwrap();
+    if !check_try_permissions(
+        client,
+        &comment.repository,
+        &comment.author,
+        &config,
+        comment.number,
+    )
+    .await?
+    {
         return Ok(());
     }
 
     let pr_number: PullRequestNumber = comment.number;
-    let pr = comment.pr.get_pull(repo).await;
+    let pr = comment.pr.get_pull(client).await;
 
     todo!();
 
@@ -199,8 +229,9 @@ handled during merge and rebase. This is normal, and you should still perform st
     )
 }
 
-async fn check_try_permissions<R: RepositoryClient>(
-    repo: &R,
+async fn check_try_permissions<C: GitHubClient>(
+    client: &mut C,
+    repo: &GithubRepo,
     author: &GithubUser,
     config: &Config,
     pr_number: PullRequestNumber,
@@ -210,14 +241,16 @@ async fn check_try_permissions<R: RepositoryClient>(
         .await
     {
         tracing::info!("Permission denied");
-        repo.post_comment(
-            pr_number,
-            &format!(
-                "@{}: :key: Insufficient privileges: not in try users",
-                author.username
-            ),
-        )
-        .await?;
+        client
+            .post_comment(
+                repo,
+                pr_number,
+                &format!(
+                    "@{}: :key: Insufficient privileges: not in try users",
+                    author.username
+                ),
+            )
+            .await?;
         false
     } else {
         true

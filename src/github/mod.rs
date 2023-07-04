@@ -4,12 +4,14 @@ use std::fmt::{Debug, Display, Formatter};
 
 use url::Url;
 
-pub mod api;
+pub mod client;
 mod labels;
+pub mod misc;
 pub mod webhook;
 
-pub use api::operations::MergeError;
+pub use client::MergeError;
 pub use labels::{LabelModification, LabelTrigger};
+const API_ENDPOINT: &str = "https://api.github.com";
 
 /// Unique identifier of a GitHub repository
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]

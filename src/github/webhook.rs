@@ -11,12 +11,12 @@ use hmac::{Hmac, Mac};
 use http::StatusCode;
 use sha2::Sha256;
 
+use super::misc::{WorkflowStatus, WorkflowType};
 use crate::bors::event::{
     BorsEvent, CheckSuiteCompleted, PullRequestComment, WorkflowCompleted, WorkflowStarted, PR,
 };
 use crate::cf::Req;
 use crate::config::WEBHOOK_SECRET;
-use crate::github::api::misc::{WorkflowStatus, WorkflowType};
 use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequestNumber};
 
 /// This struct is used to extract the repository and user from a GitHub webhook event.
@@ -254,7 +254,7 @@ fn parse_user(user: Author) -> GithubUser {
 }
 
 fn parse_pr(pr: crate::models::pulls::PullRequest) -> PR {
-    PR::PR(super::api::client::github_pr_to_pr(pr))
+    PR::PR(super::misc::github_pr_to_pr(pr))
 }
 
 fn parse_pr_comment(

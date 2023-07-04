@@ -1,10 +1,10 @@
 use url::Url;
 
-use crate::github::api::misc::{WorkflowStatus, WorkflowType};
+use crate::github::misc::{WorkflowStatus, WorkflowType};
 use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequest, PullRequestNumber};
 use crate::models::RunId;
 
-use super::RepositoryClient;
+use crate::github::client::GitHubClient;
 
 #[derive(Debug)]
 pub enum BorsEvent {
@@ -30,10 +30,10 @@ pub enum PR {
 }
 
 impl PR {
-    pub async fn get_pull<R: RepositoryClient>(&mut self, repo: &R) -> &PullRequest {
+    pub async fn get_pull<R: GitHubClient>(&mut self, repo: &mut R) -> &PullRequest {
         match self {
             PR::PRUrl(url) => {
-                let pr = crate::github::api::client::github_pr_to_pr(
+                let pr = crate::github::misc::github_pr_to_pr(
                     repo.get(url.as_str()).await.unwrap().json().await.unwrap(),
                 );
                 *self = PR::PR(pr);

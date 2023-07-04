@@ -13,24 +13,46 @@ pub static CMD_PREFIX: OnceLock<String> = OnceLock::new();
 pub static WEBHOOK_SECRET: OnceLock<String> = OnceLock::new();
 /// Personal Access Token for BOT.
 pub static PAT: OnceLock<String> = OnceLock::new();
+/// Github App ID.
+pub static APP_ID: OnceLock<String> = OnceLock::new();
+/// Private key used to authenticate as a Github App.
+pub static PRIVATE_KEY: OnceLock<String> = OnceLock::new();
 
 /// Config file to search in repo or org config repo
 const CONFIG_FILE_PATH: &str = "/bors.toml";
-/// Organistaion's config repo
+/// Organistaions global config repo
+#[cfg(feature = "servo")]
 pub const ORG_CONFIG_REPO: &str = "saltfs";
 
 /// Configuration of a repository loaded from a `bors.toml`
 /// file located in the root of the repository file tree.
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
+    /// Currently unimplemented
+    ///
+    /// Inheritance: Merged
     #[serde(default, deserialize_with = "deserialize_labels")]
     pub labels: HashMap<LabelTrigger, Vec<LabelModification>>,
+    /// List of reviewers
+    ///
+    /// Inheritance: Merged
     #[serde(default)]
     pub reviewers: HashSet<String>,
+    /// List of try users
+    ///
+    /// Inheritance: Merged
     #[serde(default)]
     pub try_users: HashSet<String>,
+    /// List of try choosers
+    ///
+    /// Inheritance: Override
     #[serde(default)]
     pub try_choosers: HashSet<String>,
+    /// Run try on Bot's fork
+    ///
+    /// Inheritance: Override
+    #[serde(default)]
+    pub fork_try: bool,
 }
 
 impl Config {
@@ -48,6 +70,8 @@ impl Config {
         if !local.try_choosers.is_empty() {
             global.try_choosers = local.try_choosers;
         }
+        // this field is overriden
+        global.fork_try = local.fork_try;
         global
     }
 
@@ -66,18 +90,28 @@ impl Config {
         None
     }
 
-    pub async fn get_all(client: &Client, repo: &GithubRepo) -> Option<Config> {
-        let local = if let Some(loc) = Config::get(client, &repo.to_string(), "master").await {
+    pub async fn get_all(repo: &GithubRepo) -> Option<Config> {
+        let client = Client::new();
+        let mut local = if let Some(loc) = Config::get(&client, &repo.to_string(), "master").await {
             Some(loc)
         } else {
-            Config::get(client, &repo.to_string(), "main").await
+            Config::get(&client, &repo.to_string(), "main").await
         };
 
-        let repo = format!("{ORG_CONFIG_REPO}/{}", repo.name());
-        let global = if let Some(loc) = Config::get(client, &repo, "master").await {
-            Some(loc)
-        } else {
-            Config::get(client, &repo, "main").await
+        #[cfg(feature = "servo")]
+        if local.is_none() {
+            Config::get(client, &repo.to_string(), "servo").await
+        }
+
+        let mut global = None;
+        #[cfg(feature = "servo")]
+        {
+            let repo = format!("{ORG_CONFIG_REPO}/{}", repo.name());
+            if let Some(loc) = Config::get(&client, &repo, "master").await {
+                global = Some(loc)
+            } else {
+                global = Config::get(&client, &repo, "main").await
+            };
         };
         match (local, global) {
             (Some(loc), Some(glob)) => Some(Config::merge(glob, loc)),
