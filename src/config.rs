@@ -18,8 +18,8 @@ pub static APP_ID: OnceLock<String> = OnceLock::new();
 /// Private key used to authenticate as a Github App.
 pub static PRIVATE_KEY: OnceLock<String> = OnceLock::new();
 
-/// Config file to search in repo or org config repo
-const CONFIG_FILE_PATH: &str = "/bors.toml";
+/// Config file to search in repo
+const CONFIG_FILE_PATH: &str = "bors-mq.toml";
 /// Organistaions global config repo
 #[cfg(feature = "servo")]
 pub const ORG_CONFIG_REPO: &str = "saltfs";
@@ -78,12 +78,13 @@ impl Config {
     async fn get(client: &Client, repo: &str, branch: &str) -> Option<Self> {
         if let Ok(res) = client
             .get(format!(
-                "https://raw.githubusercontent.com/{repo}/{branch}{CONFIG_FILE_PATH}"
+                "https://raw.githubusercontent.com/{repo}/{branch}/{CONFIG_FILE_PATH}"
             ))
             .send()
             .await
         {
             if let Ok(txt) = res.text().await {
+                tracing::debug!("Found config on {repo}/{branch}");
                 return toml::from_str(&txt).ok();
             }
         }
@@ -251,6 +252,12 @@ try_failed = []
         let content = r#"[labels]
 try = ["foo"]
 "#;
+        load_config(content);
+    }
+
+    #[test]
+    fn deserialize_me() {
+        let content = r#"reviewers=["sagudev"]"#;
         load_config(content);
     }
 
