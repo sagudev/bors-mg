@@ -38,7 +38,7 @@ macro_rules! app_pat {
             app_cli.$fn($($arg),*).await
         } else if TokenClient::is_available() {
             $sef.token.$fn($($arg),*).await
-        } else  else {
+        } else {
             Err(AutoClientError::NoClient.into())
         }
     };
@@ -109,7 +109,7 @@ impl GitHubClient for AutoGitHubClient {
         branch: &str,
         sha: &CommitSha,
     ) -> anyhow::Result<()> {
-        pat_app!(self, set_branch_to_sha(repo, branch, sha))
+        app_pat!(self, set_branch_to_sha(repo, branch, sha))
     }
 
     async fn create_branch(
@@ -118,7 +118,7 @@ impl GitHubClient for AutoGitHubClient {
         name: &str,
         sha: &CommitSha,
     ) -> Result<()> {
-        pat_app!(self, create_branch(repo, name, sha))
+        app_pat!(self, create_branch(repo, name, sha))
     }
 
     /// Force update the branch with the given `branch_name` to the given `sha`.
@@ -128,7 +128,7 @@ impl GitHubClient for AutoGitHubClient {
         branch_name: &str,
         sha: &CommitSha,
     ) -> Result<()> {
-        pat_app!(self, update_branch(repo, branch_name, sha))
+        app_pat!(self, update_branch(repo, branch_name, sha))
     }
 
     /// Creates a merge commit on the given repository.
@@ -141,7 +141,7 @@ impl GitHubClient for AutoGitHubClient {
         head: &CommitSha,
         commit_message: &str,
     ) -> Result<CommitSha> {
-        pat_app!(self, merge_branches(repo, base, head, commit_message))
+        app_pat!(self, merge_branches(repo, base, head, commit_message))
     }
 
     /// Find all check suites attached to the given commit and branch.
@@ -150,11 +150,11 @@ impl GitHubClient for AutoGitHubClient {
         branch: &str,
         sha: &CommitSha,
     ) -> anyhow::Result<Vec<CheckSuite>> {
-        pat_app!(self, get_check_suites_for_commit(branch, sha))
+        app_pat!(self, get_check_suites_for_commit(branch, sha))
     }
 
     /// Cancels Github Actions workflows.
     async fn cancel_workflows(&mut self, run_ids: Vec<RunId>) -> anyhow::Result<()> {
-        pat_app!(self, cancel_workflows(run_ids))
+        app_pat!(self, cancel_workflows(run_ids))
     }
 }
