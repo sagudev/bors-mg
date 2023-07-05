@@ -1,15 +1,16 @@
-pub use super::payload;
-use super::{ActorId, OrgId, RepositoryId};
 use chrono::{DateTime, Utc};
-use payload::MemberEventPayload;
 use payload::{
     CommitCommentEventPayload, CreateEventPayload, DeleteEventPayload, EventPayload,
     ForkEventPayload, GollumEventPayload, IssueCommentEventPayload, IssuesEventPayload,
-    PullRequestEventPayload, PullRequestReviewCommentEventPayload, PullRequestReviewEventPayload,
-    PushEventPayload, WorkflowRunEventPayload,
+    MemberEventPayload, PullRequestEventPayload, PullRequestReviewCommentEventPayload,
+    PullRequestReviewEventPayload, PushEventPayload, WorkflowRunEventPayload,
 };
-use serde::{de::Error, Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Serialize};
 use url::Url;
+
+pub use super::payload;
+use super::{ActorId, OrgId, RepositoryId};
 
 /// A GitHub event.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -155,8 +156,9 @@ impl<'de> Deserialize<'de> for Event {
 
 #[cfg(test)]
 mod test {
-    use super::{Event, EventPayload, EventType};
     use url::Url;
+
+    use super::{Event, EventPayload, EventType};
 
     #[test]
     fn should_deserialize_push_event() {

@@ -1,5 +1,6 @@
-use crate::models::issues::Comment;
 use serde::{Deserialize, Serialize};
+
+use crate::models::issues::Comment;
 
 /// The payload in a [`super::EventPayload::CommitCommentEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -11,7 +12,8 @@ pub struct CommitCommentEventPayload {
 
 #[cfg(test)]
 mod test {
-    use crate::models::events::{payload::EventPayload, Event};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_with_correct_payload() {

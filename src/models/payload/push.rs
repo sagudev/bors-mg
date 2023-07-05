@@ -18,11 +18,11 @@ pub struct PushEventPayload {
 
 #[cfg(test)]
 mod test {
-    use crate::models::{
-        events::{payload::EventPayload, Event},
-        repos::CommitAuthor,
-    };
     use url::Url;
+
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
+    use crate::models::repos::CommitAuthor;
 
     #[test]
     fn should_deserialize_push_event_with_correct_payload() {

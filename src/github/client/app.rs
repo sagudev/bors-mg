@@ -3,11 +3,10 @@ use std::time::UNIX_EPOCH;
 use anyhow::{anyhow, Context, Result};
 use jsonwebtoken::{Algorithm, Header};
 
+use super::GitHubClient;
 use crate::config::{APP_ID, PRIVATE_KEY};
 use crate::github::API_ENDPOINT;
 use crate::models::AppId;
-
-use super::GitHubClient;
 
 /// Provides access to a single app installation (repository) using the GitHub API.
 pub struct AppClient(String);

@@ -1,7 +1,6 @@
+use super::GitHubClient;
 use crate::config::PAT;
 use crate::github::API_ENDPOINT;
-
-use super::GitHubClient;
 
 /// Provides access to GitHub API using PAT
 pub struct TokenClient;

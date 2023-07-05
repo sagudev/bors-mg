@@ -37,7 +37,8 @@ pub enum GollumEventPageAction {
 #[cfg(test)]
 mod test {
     use super::GollumEventPageAction;
-    use crate::models::events::{payload::EventPayload, Event};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_action_from_lowercase() {

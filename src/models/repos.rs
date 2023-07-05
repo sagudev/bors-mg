@@ -1,5 +1,6 @@
-use super::*;
 use url::Url;
+
+use super::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

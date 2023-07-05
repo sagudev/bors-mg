@@ -1,14 +1,10 @@
 use anyhow::Context;
-
-use crate::models::RunId;
-
-use super::misc::CheckSuite;
-use super::{CommitSha, GithubRepo, PullRequestNumber};
-
 use reqwest::StatusCode;
 use thiserror::Error;
 
-use super::misc::Reference;
+use super::misc::{CheckSuite, Reference};
+use super::{CommitSha, GithubRepo, PullRequestNumber};
+use crate::models::RunId;
 mod app;
 mod auto;
 mod token;

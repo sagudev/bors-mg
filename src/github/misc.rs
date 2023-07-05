@@ -1,9 +1,8 @@
-use crate::models::RunId;
 use chrono::{DateTime, Utc};
 
-use crate::github::PullRequestNumber;
-
 use super::{Branch, PullRequest};
+use crate::github::PullRequestNumber;
+use crate::models::RunId;
 
 /// Status of a GitHub build.
 #[derive(Debug, PartialEq)]

@@ -1,5 +1,6 @@
-use crate::models::Author;
 use serde::{Deserialize, Serialize};
+
+use crate::models::Author;
 
 /// The payload in a [`super::EventPayload::MemberEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -45,9 +46,11 @@ pub enum MemberEventAction {
 
 #[cfg(test)]
 mod test {
-    use super::{MemberEventAction, MemberEventChanges, MemberEventChangesTo};
-    use crate::models::events::{payload::EventPayload, Event};
     use serde_json::json;
+
+    use super::{MemberEventAction, MemberEventChanges, MemberEventChangesTo};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_action_from_lowercase() {

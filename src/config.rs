@@ -197,8 +197,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
     use std::collections::BTreeMap;
+
+    use crate::config::Config;
 
     #[test]
     fn deserialize_empty() {

@@ -1,9 +1,10 @@
 //! Defines parsers for bors commands.
 
-use crate::bors::command::BorsCommand;
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::SplitWhitespace;
+
+use crate::bors::command::BorsCommand;
 
 #[derive(Debug)]
 pub enum CommandParseError<'a> {
@@ -143,10 +144,10 @@ pub fn parse_key_value(input: &str) -> Result<HashMap<String, String>, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bors::command::parser::parse_key_value;
-    use crate::bors::command::parser::{CommandParseError, CommandParser};
-    use crate::bors::command::BorsCommand;
     use std::collections::HashMap;
+
+    use crate::bors::command::parser::{parse_key_value, CommandParseError, CommandParser};
+    use crate::bors::command::BorsCommand;
 
     #[test]
     fn test_no_commands() {

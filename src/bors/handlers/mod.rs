@@ -1,8 +1,9 @@
 use anyhow::Context;
 use tracing::Instrument;
 
-use crate::bors::command::BorsCommand;
-use crate::bors::command::CommandParseError;
+use super::event::PR;
+use super::CommandParser;
+use crate::bors::command::{BorsCommand, CommandParseError};
 use crate::bors::event::{BorsEvent, PullRequestComment};
 use crate::bors::handlers::ping::command_ping;
 use crate::bors::handlers::trybuild::{command_try_build, command_try_cancel, TRY_BRANCH_NAME};
@@ -11,16 +12,9 @@ use crate::bors::handlers::trybuild::{command_try_build, command_try_cancel, TRY
 };*/
 use crate::config::CMD_PREFIX;
 use crate::config::PAT;
-use crate::github::client::AutoGitHubClient;
-use crate::github::client::GitHubClient;
-use crate::github::client::TokenClient;
-use crate::github::GithubRepo;
-use crate::github::GithubUser;
-use crate::github::PullRequestNumber;
+use crate::github::client::{AutoGitHubClient, GitHubClient, TokenClient};
+use crate::github::{GithubRepo, GithubUser, PullRequestNumber};
 use crate::utils::logging::LogError;
-
-use super::event::PR;
-use super::CommandParser;
 
 mod ping;
 mod trybuild;

@@ -1,5 +1,7 @@
-use crate::models::{issues::Issue, Author, Label};
 use serde::{Deserialize, Serialize};
+
+use crate::models::issues::Issue;
+use crate::models::{Author, Label};
 
 /// The payload in a [`super::EventPayload::IssuesEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,9 +64,11 @@ pub enum IssuesEventAction {
 
 #[cfg(test)]
 mod test {
-    use super::{IssuesEventAction, IssuesEventChanges, IssuesEventChangesFrom};
-    use crate::models::events::{payload::EventPayload, Event};
     use serde_json::json;
+
+    use super::{IssuesEventAction, IssuesEventChanges, IssuesEventChangesFrom};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_action_from_lowercase() {

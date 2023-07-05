@@ -7,11 +7,10 @@ use anyhow::Result;
 use reqwest::Response;
 use thiserror::Error;
 
+use super::{AppClient, GitHubClient, TokenClient};
 use crate::github::misc::CheckSuite;
 use crate::github::{CommitSha, GithubRepo, PullRequestNumber};
 use crate::models::RunId;
-
-use super::{AppClient, GitHubClient, TokenClient};
 
 #[derive(Error, Debug)]
 pub enum AutoClientError {

@@ -14,7 +14,8 @@ pub struct CreateEventPayload {
 
 #[cfg(test)]
 mod test {
-    use crate::models::events::{payload::EventPayload, Event};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_create_event_with_correct_payload() {

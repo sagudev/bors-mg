@@ -1,5 +1,6 @@
-use crate::models::pulls::PullRequest;
 use serde::{Deserialize, Serialize};
+
+use crate::models::pulls::PullRequest;
 
 /// The payload in a [`super::EventPayload::PullRequestEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,9 +63,11 @@ pub struct PullRequestEventChangesFrom {
 
 #[cfg(test)]
 mod test {
-    use super::{PullRequestChanges, PullRequestEventAction, PullRequestEventChangesFrom};
-    use crate::models::events::{payload::EventPayload, Event};
     use serde_json::json;
+
+    use super::{PullRequestChanges, PullRequestEventAction, PullRequestEventChangesFrom};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_action_from_snake_case() {

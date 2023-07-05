@@ -1,12 +1,6 @@
 //! This module handles parsing webhooks and generating [`BorsEvent`]s from them.
 use std::fmt::Debug;
 
-use crate::models::events::payload::{
-    IssueCommentEventAction, IssueCommentEventPayload, PullRequestReviewCommentEventAction,
-    PullRequestReviewCommentEventPayload,
-};
-use crate::models::pulls::Review;
-use crate::models::{apps::App, workflows, Author, CheckRun, Repository, RunId};
 use hmac::{Hmac, Mac};
 use http::StatusCode;
 use sha2::Sha256;
@@ -18,6 +12,13 @@ use crate::bors::event::{
 use crate::cf::Req;
 use crate::config::WEBHOOK_SECRET;
 use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequestNumber};
+use crate::models::apps::App;
+use crate::models::events::payload::{
+    IssueCommentEventAction, IssueCommentEventPayload, PullRequestReviewCommentEventAction,
+    PullRequestReviewCommentEventPayload,
+};
+use crate::models::pulls::Review;
+use crate::models::{workflows, Author, CheckRun, Repository, RunId};
 
 /// This struct is used to extract the repository and user from a GitHub webhook event.
 /// The wrapper exists because octocrab doesn't expose/parse the repository field.

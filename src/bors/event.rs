@@ -1,10 +1,9 @@
 use url::Url;
 
+use crate::github::client::GitHubClient;
 use crate::github::misc::{WorkflowStatus, WorkflowType};
 use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequest, PullRequestNumber};
 use crate::models::RunId;
-
-use crate::github::client::GitHubClient;
 
 #[derive(Debug)]
 pub enum BorsEvent {

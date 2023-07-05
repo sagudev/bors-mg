@@ -1,7 +1,8 @@
-use crate::bors::event::{PullRequestComment, PR};
-use crate::config::Config;
 use anyhow::anyhow;
 
+use super::PullRequestData;
+use crate::bors::event::{PullRequestComment, PR};
+use crate::config::Config;
 use crate::github::client::GitHubClient;
 use crate::github::misc::{
     BuildModel, BuildStatus, PullRequestModel, WorkflowStatus, WorkflowType,
@@ -10,8 +11,6 @@ use crate::github::{
     GithubRepo, GithubUser, LabelTrigger, MergeError, PullRequest, PullRequestNumber,
 };
 use crate::permissions::{PermissionResolver, PermissionType};
-
-use super::PullRequestData;
 
 // This branch serves for preparing the final commit.
 // It will be reset to master and merged with the branch that should be tested.

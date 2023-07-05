@@ -1,9 +1,8 @@
-use crate::models::{
-    orgs::Organization,
-    workflows::{Run, WorkFlow},
-    Author, Repository,
-};
 use serde::{Deserialize, Serialize};
+
+use crate::models::orgs::Organization;
+use crate::models::workflows::{Run, WorkFlow};
+use crate::models::{Author, Repository};
 
 /// The payload in a [`super::EventPayload::WorkflowRunEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -28,7 +27,8 @@ pub enum WorkflowRunEventAction {
 
 #[cfg(test)]
 mod test {
-    use crate::models::events::{payload::EventPayload, Event};
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_with_correct_payload() {

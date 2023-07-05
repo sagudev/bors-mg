@@ -1,5 +1,6 @@
-use super::*;
 use chrono::{DateTime, Utc};
+
+use super::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]

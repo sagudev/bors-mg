@@ -12,7 +12,6 @@ mod pull_request_review_comment;
 mod push;
 mod workflow_run;
 
-use crate::models::repos::CommitAuthor;
 pub use commit_comment::*;
 pub use create::*;
 pub use delete::*;
@@ -25,10 +24,11 @@ pub use pull_request::*;
 pub use pull_request_review::*;
 pub use pull_request_review_comment::*;
 pub use push::*;
-pub use workflow_run::*;
-
 use serde::{Deserialize, Serialize};
 use url::Url;
+pub use workflow_run::*;
+
+use crate::models::repos::CommitAuthor;
 
 /// The payload in an event type.
 ///

@@ -1,5 +1,6 @@
-use crate::models::pulls::{PullRequest, Review};
 use serde::{Deserialize, Serialize};
+
+use crate::models::pulls::{PullRequest, Review};
 
 /// The payload in a [`super::EventPayload::PullRequestReviewEvent`] type.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,11 +41,13 @@ pub struct PullRequestReviewChangesFrom {
 
 #[cfg(test)]
 mod test {
+    use serde_json::json;
+
     use super::{
         PullRequestReviewChanges, PullRequestReviewChangesFrom, PullRequestReviewEventAction,
     };
-    use crate::models::events::{payload::EventPayload, Event};
-    use serde_json::json;
+    use crate::models::events::payload::EventPayload;
+    use crate::models::events::Event;
 
     #[test]
     fn should_deserialize_action_from_lowercase() {
