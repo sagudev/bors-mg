@@ -1,6 +1,6 @@
 use super::GitHubClient;
-use crate::config::PAT;
-use crate::github::API_ENDPOINT;
+use crate::config::{CMD_PREFIX, PAT};
+use crate::github::{GithubRepo, API_ENDPOINT};
 
 /// Provides access to GitHub API using PAT
 pub struct TokenClient;
@@ -11,10 +11,14 @@ impl GitHubClient for TokenClient {
         PAT.get().is_some()
     }
 
-    async fn get<U: reqwest::IntoUrl>(&mut self, url: U) -> anyhow::Result<reqwest::Response> {
+    async fn get(&mut self, end: &str) -> anyhow::Result<reqwest::Response> {
+        tracing::debug!("Bearer {}", PAT.get().unwrap());
         reqwest::Client::new()
-            .get(url)
+            .get(API_ENDPOINT.to_owned() + end)
             .bearer_auth(PAT.get().unwrap())
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
             .send()
             .await
             .map_err(|e| anyhow::anyhow!(e))
@@ -25,13 +29,15 @@ impl GitHubClient for TokenClient {
         end: &str,
         data: &D,
     ) -> anyhow::Result<reqwest::Response> {
-        reqwest::Client::new()
+        let req = reqwest::Client::new()
             .post(API_ENDPOINT.to_owned() + end)
             .bearer_auth(PAT.get().unwrap())
-            .json(data)
-            .send()
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
+            .json(data);
+        tracing::debug!("Reqq: {:#?}", req);
+        req.send().await.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn patch<D: serde::Serialize + Sized>(
@@ -39,9 +45,13 @@ impl GitHubClient for TokenClient {
         end: &str,
         data: &D,
     ) -> anyhow::Result<reqwest::Response> {
+        tracing::debug!("Bearer {}", PAT.get().unwrap());
         reqwest::Client::new()
             .patch(API_ENDPOINT.to_owned() + end)
             .bearer_auth(PAT.get().unwrap())
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
             .json(data)
             .send()
             .await

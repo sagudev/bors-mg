@@ -85,17 +85,4 @@ pub struct PullRequest {
     pub message: String,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct PullRequestNumber(pub u64);
-
-impl From<u64> for PullRequestNumber {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl Display for PullRequestNumber {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        <u64 as Display>::fmt(&self.0, f)
-    }
-}
+pub type PullRequestNumber = u64;

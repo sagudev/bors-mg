@@ -11,7 +11,7 @@ use crate::bors::event::{
 };
 use crate::cf::Req;
 use crate::config::WEBHOOK_SECRET;
-use crate::github::{CommitSha, GithubRepo, GithubUser, PullRequestNumber};
+use crate::github::{CommitSha, GithubRepo, GithubUser};
 use crate::models::apps::App;
 use crate::models::events::payload::{
     IssueCommentEventAction, IssueCommentEventPayload, PullRequestReviewCommentEventAction,
@@ -226,7 +226,7 @@ fn parse_pr_review_comment(
     PullRequestComment {
         repository: repo,
         author: user,
-        pr_number: PullRequestNumber(payload.pull_request.number),
+        pr_number: payload.pull_request.number,
         pr: parse_pr(payload.pull_request),
         text: payload.comment.body.unwrap_or_default(),
     }
@@ -241,7 +241,7 @@ fn parse_comment_from_pr_review(
     Ok(PullRequestComment {
         repository: repository_name,
         author: user,
-        pr_number: PullRequestNumber(payload.pull_request.number),
+        pr_number: payload.pull_request.number,
         pr: parse_pr(payload.pull_request),
         text: payload.review.body.unwrap_or_default(),
     })
@@ -272,7 +272,7 @@ fn parse_pr_comment(
         repository: repo,
         author: parse_user(payload.comment.user),
         text: payload.comment.body.unwrap_or_default(),
-        pr_number: PullRequestNumber(payload.issue.number),
+        pr_number: payload.issue.number,
         pr: PR::PRUrl(payload.issue.pull_request.unwrap().url),
     })
 }

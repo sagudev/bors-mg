@@ -1,3 +1,6 @@
+# Install wrangler
+bootstrap:
+    cargo install -q worker-build
 # Build wasm
 build:
     wrangler build
@@ -9,4 +12,9 @@ deploy:
     wrangler deploy
 # Log on worker
 log:
+    wrangler tail
+work:
+    just fmt
+    clear
+    wrangler deploy
     wrangler tail

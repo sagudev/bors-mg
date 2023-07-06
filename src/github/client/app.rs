@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use jsonwebtoken::{Algorithm, Header};
 
 use super::GitHubClient;
-use crate::config::{APP_ID, PRIVATE_KEY};
+use crate::config::{APP_ID, CMD_PREFIX, PRIVATE_KEY};
 use crate::github::API_ENDPOINT;
 use crate::models::AppId;
 
@@ -62,10 +62,13 @@ impl GitHubClient for AppClient {
         APP_ID.get().is_some() && PRIVATE_KEY.get().is_some()
     }
 
-    async fn get<U: reqwest::IntoUrl>(&mut self, url: U) -> Result<reqwest::Response> {
+    async fn get(&mut self, end: &str) -> Result<reqwest::Response> {
         reqwest::Client::new()
-            .get(url)
+            .get(API_ENDPOINT.to_owned() + end)
             .bearer_auth(&self.0)
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
             .send()
             .await
             .map_err(|e| anyhow::anyhow!(e))
@@ -79,6 +82,9 @@ impl GitHubClient for AppClient {
         reqwest::Client::new()
             .post(API_ENDPOINT.to_owned() + end)
             .bearer_auth(&self.0)
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
             .json(data)
             .send()
             .await
@@ -93,6 +99,9 @@ impl GitHubClient for AppClient {
         reqwest::Client::new()
             .patch(API_ENDPOINT.to_owned() + end)
             .bearer_auth(&self.0)
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", CMD_PREFIX.get().unwrap())
             .json(data)
             .send()
             .await

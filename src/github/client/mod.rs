@@ -1,9 +1,10 @@
-use anyhow::Context;
+use anyhow::{Context, Result};
 use reqwest::StatusCode;
 use thiserror::Error;
 
 use super::misc::{CheckSuite, Reference};
-use super::{CommitSha, GithubRepo, PullRequestNumber};
+use super::{CommitSha, GithubRepo, PullRequest, PullRequestNumber};
+use crate::github::misc::github_pr_to_pr;
 use crate::models::RunId;
 mod app;
 mod auto;
@@ -17,17 +18,17 @@ pub use token::TokenClient;
 pub trait GitHubClient {
     fn is_available() -> bool;
 
-    async fn get<U: reqwest::IntoUrl>(&mut self, url: U) -> anyhow::Result<reqwest::Response>;
+    async fn get(&mut self, end: &str) -> Result<reqwest::Response>;
     async fn post<D: serde::Serialize + Sized>(
         &mut self,
         end: &str,
         data: &D,
-    ) -> anyhow::Result<reqwest::Response>;
+    ) -> Result<reqwest::Response>;
     async fn patch<D: serde::Serialize + Sized>(
         &mut self,
         end: &str,
         data: &D,
-    ) -> anyhow::Result<reqwest::Response>;
+    ) -> Result<reqwest::Response>;
 
     /// Post a comment to the pull request with the given number.
     async fn post_comment(
@@ -35,10 +36,11 @@ pub trait GitHubClient {
         repo: &GithubRepo,
         pr: PullRequestNumber,
         text: &str,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
+        tracing::debug!("/repos/{repo}/issues/{pr}/comments with body: {text}");
         let res = self
-            .patch(
-                &format!("/repos/{repo}/issues/{pr}/comments",),
+            .post(
+                &format!("/repos/{repo}/issues/{pr}/comments"),
                 &serde_json::json!({
                     "body": text,
                 }),
@@ -51,21 +53,25 @@ pub trait GitHubClient {
         Ok(())
     }
 
-    /*
     /// Resolve a pull request from this repository by it's number.
-    async fn get_pull_request(&mut self, pr: PullRequestNumber) -> anyhow::Result<PullRequest> {
-        todo!();
+    async fn get_pull_request(
+        &mut self,
+        repo: &GithubRepo,
+        pull_number: PullRequestNumber,
+    ) -> Result<PullRequest> {
         let pr = self
-            .client
-            .pulls(self.repository().owner(), self.repository().name())
-            .get(pr.0)
+            .get(&format!("/repos/{repo}/pulls/{pull_number}"))
             .await
             .map_err(|error| {
-                anyhow::anyhow!("Could not get PR {}/{}: {error:?}", self.repository(), pr.0)
+                anyhow::anyhow!("Could not get PR {}/{}: {error:?}", repo, pull_number)
+            })?
+            .json()
+            .await
+            .map_err(|error| {
+                anyhow::anyhow!("Could not parse PR {}/{}: {error:?}", repo, pull_number)
             })?;
         Ok(github_pr_to_pr(pr))
     }
-    */
 
     /// Set the given branch to a commit with the given `sha`.
     ///
@@ -76,7 +82,7 @@ pub trait GitHubClient {
         repo: &GithubRepo,
         branch: &str,
         sha: &CommitSha,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         // Fast-path: assume that the branch exists
         match self.update_branch(repo, branch, sha).await {
             Ok(_) => Ok(()),
@@ -98,7 +104,7 @@ pub trait GitHubClient {
         repo: &GithubRepo,
         name: &str,
         sha: &CommitSha,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         /*repo.client
         .repos(repo.repo_name.owner(), repo.repo_name.name())
         .create_ref(&Reference::Branch(name), sha.as_ref())
@@ -113,7 +119,7 @@ pub trait GitHubClient {
         repo: &GithubRepo,
         branch_name: &str,
         sha: &CommitSha,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         let res: reqwest::Response = self
             .patch(
                 &format!(
@@ -149,7 +155,7 @@ pub trait GitHubClient {
         base: &str,
         head: &CommitSha,
         commit_message: &str,
-    ) -> anyhow::Result<CommitSha> {
+    ) -> Result<CommitSha> {
         let request = MergeRequest {
             base: base,
             head: head.as_ref(),
@@ -201,7 +207,7 @@ pub trait GitHubClient {
         &mut self,
         branch: &str,
         sha: &CommitSha,
-    ) -> anyhow::Result<Vec<CheckSuite>> {
+    ) -> Result<Vec<CheckSuite>> {
         todo!();
         /*
         let response = self
@@ -257,7 +263,7 @@ pub trait GitHubClient {
     }
 
     /// Cancels Github Actions workflows.
-    async fn cancel_workflows(&mut self, run_ids: Vec<RunId>) -> anyhow::Result<()> {
+    async fn cancel_workflows(&mut self, run_ids: Vec<RunId>) -> Result<()> {
         todo!()
         /*let actions = reqwest::Client::new().actions();
 

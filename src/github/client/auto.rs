@@ -4,12 +4,11 @@
 use std::cell::OnceCell;
 
 use anyhow::Result;
-use reqwest::Response;
 use thiserror::Error;
 
 use super::{AppClient, GitHubClient, TokenClient};
 use crate::github::misc::CheckSuite;
-use crate::github::{CommitSha, GithubRepo, PullRequestNumber};
+use crate::github::{CommitSha, GithubRepo, PullRequest, PullRequestNumber};
 use crate::models::RunId;
 
 #[derive(Error, Debug)]
@@ -68,8 +67,8 @@ impl GitHubClient for AutoGitHubClient {
         TokenClient::is_available() || AppClient::is_available()
     }
 
-    async fn get<U: reqwest::IntoUrl>(&mut self, url: U) -> anyhow::Result<reqwest::Response> {
-        pat_app!(self, get(url))
+    async fn get(&mut self, end: &str) -> anyhow::Result<reqwest::Response> {
+        pat_app!(self, get(end))
     }
 
     async fn post<D: serde::Serialize + Sized>(
@@ -96,6 +95,14 @@ impl GitHubClient for AutoGitHubClient {
         text: &str,
     ) -> anyhow::Result<()> {
         pat_app!(self, post_comment(repo, pr, text))
+    }
+
+    async fn get_pull_request(
+        &mut self,
+        repo: &GithubRepo,
+        pull_number: PullRequestNumber,
+    ) -> Result<PullRequest> {
+        app_pat!(self, get_pull_request(repo, pull_number))
     }
 
     /// Set the given branch to a commit with the given `sha`.
