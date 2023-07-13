@@ -75,6 +75,14 @@ pub enum Reference {
 }
 
 impl Reference {
+    pub fn internal(&self) -> &str {
+        match self {
+            Reference::Branch(x) => x,
+            Reference::Tag(x) => x,
+            Reference::Commit(x) => x,
+        }
+    }
+
     pub fn ref_url(&self) -> String {
         match self {
             Self::Branch(branch) => format!("heads/{branch}"),

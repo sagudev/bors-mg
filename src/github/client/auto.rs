@@ -7,7 +7,7 @@ use anyhow::Result;
 use thiserror::Error;
 
 use super::{AppClient, GitHubClient, TokenClient};
-use crate::github::misc::CheckSuite;
+use crate::github::misc::{CheckSuite, Reference};
 use crate::github::{CommitSha, GithubRepo, PullRequest, PullRequestNumber};
 use crate::models::RunId;
 
@@ -121,20 +121,20 @@ impl GitHubClient for AutoGitHubClient {
     async fn create_branch(
         &mut self,
         repo: &GithubRepo,
-        name: &str,
+        refs: &Reference,
         sha: &CommitSha,
     ) -> Result<()> {
-        app_pat!(self, create_branch(repo, name, sha))
+        app_pat!(self, create_branch(repo, refs, sha))
     }
 
     /// Force update the branch with the given `branch_name` to the given `sha`.
     async fn update_branch(
         &mut self,
         repo: &GithubRepo,
-        branch_name: &str,
+        refs: &Reference,
         sha: &CommitSha,
     ) -> Result<()> {
-        app_pat!(self, update_branch(repo, branch_name, sha))
+        app_pat!(self, update_branch(repo, refs, sha))
     }
 
     /// Creates a merge commit on the given repository.

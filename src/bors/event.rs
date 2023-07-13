@@ -24,18 +24,17 @@ pub enum BorsEvent {
 
 #[derive(Clone, Debug)]
 pub enum PR {
-    PRUrl(Url),
+    // PR needs to be fetched
+    PRId((GithubRepo, PullRequestNumber)),
+    // PR already fetched (or piggybacked from main response)
     PR(PullRequest),
 }
 
 impl PR {
-    pub async fn get_pull<R: GitHubClient>(&mut self, repo: &mut R) -> &PullRequest {
+    pub async fn get_pull<R: GitHubClient>(&mut self, client: &mut R) -> &PullRequest {
         match self {
-            PR::PRUrl(url) => {
-                let pr = crate::github::misc::github_pr_to_pr(
-                    repo.get(url.as_str()).await.unwrap().json().await.unwrap(),
-                );
-                *self = PR::PR(pr);
+            PR::PRId((repo, pull_number)) => {
+                *self = PR::PR(client.get_pull_request(repo, *pull_number).await.unwrap());
                 if let PR::PR(pr) = self {
                     pr
                 } else {

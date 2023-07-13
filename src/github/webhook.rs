@@ -269,11 +269,11 @@ fn parse_pr_comment(
     }
 
     Some(PullRequestComment {
-        repository: repo,
+        repository: repo.clone(),
         author: parse_user(payload.comment.user),
         text: payload.comment.body.unwrap_or_default(),
         pr_number: payload.issue.number,
-        pr: PR::PRUrl(payload.issue.pull_request.unwrap().url),
+        pr: PR::PRId((repo, payload.issue.number)),
     })
 }
 

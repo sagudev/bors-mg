@@ -37,7 +37,6 @@ pub trait GitHubClient {
         pr: PullRequestNumber,
         text: &str,
     ) -> Result<()> {
-        tracing::debug!("/repos/{repo}/issues/{pr}/comments with body: {text}");
         let res = self
             .post(
                 &format!("/repos/{repo}/issues/{pr}/comments"),
@@ -48,7 +47,8 @@ pub trait GitHubClient {
             .await
             .with_context(|| format!("Cannot post comment to {}", pr))?;
         if !res.status().is_success() {
-            return Err(anyhow::anyhow!("Got {}", res.status()));
+            return Err(anyhow::anyhow!("Got {}", res.status())
+                .context(format!("Body {:#?}", res.text().await)));
         }
         Ok(())
     }
@@ -83,13 +83,14 @@ pub trait GitHubClient {
         branch: &str,
         sha: &CommitSha,
     ) -> Result<()> {
+        let branch_ref = Reference::Branch(branch.to_owned());
         // Fast-path: assume that the branch exists
-        match self.update_branch(repo, branch, sha).await {
+        match self.update_branch(repo, &branch_ref, sha).await {
             Ok(_) => Ok(()),
             Err(error) => match error.downcast_ref() {
                 Some(BranchUpdateError::BranchNotFound(_)) => {
                     // Branch does not exist yet, try to create it
-                    match self.create_branch(repo, branch, sha).await {
+                    match self.create_branch(repo, &branch_ref, sha).await {
                         Ok(_) => Ok(()),
                         Err(err) => Err(BranchUpdateError::Custom(err).into()),
                     }
@@ -102,14 +103,27 @@ pub trait GitHubClient {
     async fn create_branch(
         &mut self,
         repo: &GithubRepo,
-        name: &str,
+        refs: &Reference,
         sha: &CommitSha,
     ) -> Result<()> {
+        let res = self
+            .post(
+                &format!("/repos/{repo}/git/refs"),
+                &serde_json::json!({
+                    "ref": refs.full_ref_url(),
+                    "sha": sha.as_ref(),
+                }),
+            )
+            .await?;
+
+        if !res.status().is_success() {
+            return Err(anyhow::anyhow!("Got {}", res.status()));
+        }
         /*repo.client
         .repos(repo.repo_name.owner(), repo.repo_name.name())
         .create_ref(&Reference::Branch(name), sha.as_ref())
         .await
-        .map_err(|error| format!("Cannot create branch: {error}"))?;*/
+        */
         Ok(())
     }
 
@@ -117,15 +131,12 @@ pub trait GitHubClient {
     async fn update_branch(
         &mut self,
         repo: &GithubRepo,
-        branch_name: &str,
+        refs: &Reference,
         sha: &CommitSha,
     ) -> Result<()> {
         let res: reqwest::Response = self
             .patch(
-                &format!(
-                    "/repos/{repo}/git/refs/{}",
-                    Reference::Branch(branch_name.to_owned()).ref_url()
-                ),
+                &format!("/repos/{repo}/git/refs/{}", refs.ref_url()),
                 &serde_json::json!({
                     "sha": sha.as_ref(),
                     "force": true
@@ -142,7 +153,7 @@ pub trait GitHubClient {
 
         match status {
             StatusCode::OK => Ok(()),
-            _ => Err(BranchUpdateError::BranchNotFound(branch_name.to_owned()).into()),
+            _ => Err(BranchUpdateError::BranchNotFound(refs.internal().to_owned()).into()),
         }
     }
 

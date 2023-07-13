@@ -46,7 +46,7 @@ impl AppClient {
     }
 
     pub fn new() -> Result<Self> {
-        if Self::is_available() {
+        if !Self::is_available() {
             return Err(anyhow!("APP NOt available!"));
         }
         Ok(Self(Self::generate_bearer_token(
